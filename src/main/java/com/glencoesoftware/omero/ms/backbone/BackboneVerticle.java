@@ -237,6 +237,19 @@ public class BackboneVerticle extends AbstractVerticle {
                 };
             }
         );
+        eventBus.<JsonArray>consumer(
+                BackboneEventListener.MODEL_CHANGE_EVENT,
+                new Handler<Message<JsonArray>>() {
+                    public void handle(Message<JsonArray> changes) {
+                        for (Object change : changes.body()) {
+                            JsonObject changeObj = (JsonObject) change;
+                            log.info("OME Model Entity changed: {}(ID: {})",
+                                    changeObj.getString("entityName"),
+                                    changeObj.getLong("entityId"));
+                        }
+                    };
+                }
+        );
     }
 
     private void handleMessageWithJob(BackboneSimpleWork job) {
