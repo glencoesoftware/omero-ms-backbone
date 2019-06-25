@@ -12,6 +12,7 @@
   <bean id="omero-ms-backbone"
         class="com.glencoesoftware.omero.ms.backbone.BackboneService">
     <constructor-arg ref="preferenceContext"/>
+    <constructor-arg ref="sessionFactory"/>
     <constructor-arg ref="omero-ms-backbone-verticlefactory"/>
   </bean>
 

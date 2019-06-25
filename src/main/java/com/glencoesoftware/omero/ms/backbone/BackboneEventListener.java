@@ -5,16 +5,27 @@ import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import ome.model.IObject;
+import org.hibernate.HibernateException;
 import org.hibernate.event.AbstractCollectionEvent;
 import org.hibernate.event.PostCollectionRemoveEvent;
 import org.hibernate.event.PostCollectionRemoveEventListener;
 import org.hibernate.event.PostCollectionUpdateEvent;
 import org.hibernate.event.PostCollectionUpdateEventListener;
+import org.hibernate.event.PostInsertEvent;
+import org.hibernate.event.PostInsertEventListener;
+import org.hibernate.event.PostUpdateEvent;
+import org.hibernate.event.PostUpdateEventListener;
+import org.hibernate.event.SaveOrUpdateEvent;
+import org.hibernate.event.SaveOrUpdateEventListener;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
+import java.util.Map;
 
 public class BackboneEventListener implements
+        SaveOrUpdateEventListener,
+        PostInsertEventListener,
+        PostUpdateEventListener,
         PostCollectionUpdateEventListener,
         PostCollectionRemoveEventListener {
 
@@ -41,7 +52,7 @@ public class BackboneEventListener implements
     @Override
     public void onPostRemoveCollection(PostCollectionRemoveEvent postCollectionRemoveEvent) {
         log.info("Collection removed!");
-        // notifyCollectionChange(postCollectionRemoveEvent);
+        notifyCollectionChange(postCollectionRemoveEvent);
     }
 
     private void notifyCollectionChange(AbstractCollectionEvent event) {
@@ -55,20 +66,40 @@ public class BackboneEventListener implements
         owner.put("entityId", ownerId);
         changes.add(owner);
 
-        Collection<?> entities =
-                (Collection<?>) event.getCollection();
-        for (Object obj : entities) {
-            if (obj instanceof IObject) {
-                IObject iobj = (IObject) obj;
-                String entityName = iobj.getClass().getName();
-                Long entityId = iobj.getId();
-                log.info("Entity changed: {}({})", entityName, entityId);
-                JsonObject entity = new JsonObject();
-                entity.put("entityType", entityName);
-                entity.put("entityId", entityId);
-                changes.add(entity);
+        if (event.getCollection() instanceof Collection) {
+            Collection<?> entities =
+                    (Collection<?>) event.getCollection();
+            for (Object obj : entities) {
+                if (obj instanceof IObject) {
+                    IObject iobj = (IObject) obj;
+                    String entityName = iobj.getClass().getName();
+                    Long entityId = iobj.getId();
+                    log.info("Entity changed: {}({})", entityName, entityId);
+                    JsonObject entity = new JsonObject();
+                    entity.put("entityType", entityName);
+                    entity.put("entityId", entityId);
+                    changes.add(entity);
+                }
             }
+        } else if (event.getCollection() instanceof Map) {
+            Map<?, ?> entityMap = (Map<?, ?>) event.getCollection();
+            log.info("Map changed: {}", entityMap.getClass());
         }
         eventBus.publish(MODEL_CHANGE_EVENT, changes);
+    }
+
+    @Override
+    public void onPostUpdate(PostUpdateEvent postUpdateEvent) {
+        log.info("Updated Entity: {}", postUpdateEvent.getEntity());
+    }
+
+    @Override
+    public void onSaveOrUpdate(SaveOrUpdateEvent saveOrUpdateEvent) throws HibernateException {
+        log.info("Save or Update of Entity: {}", saveOrUpdateEvent.getEntity());
+    }
+
+    @Override
+    public void onPostInsert(PostInsertEvent postInsertEvent) {
+        log.info("Entity Inserted: {}", postInsertEvent.getEntity());
     }
 }
