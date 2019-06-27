@@ -38,9 +38,9 @@ import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
 import ome.system.PreferenceContext;
 import org.apache.commons.lang.ArrayUtils;
 import org.hibernate.event.EventListeners;
+import org.hibernate.event.PostDeleteEventListener;
 import org.hibernate.event.PostInsertEventListener;
 import org.hibernate.event.PostUpdateEventListener;
-import org.hibernate.event.SaveOrUpdateEventListener;
 import org.hibernate.impl.SessionFactoryImpl;
 import org.slf4j.LoggerFactory;
 
@@ -112,16 +112,14 @@ public class BackboneService {
         });
 
         log.debug("Registering Hibernate Event Listeners");
-        EventListeners eventListeners = sessionFactory.getEventListeners();
-        SaveOrUpdateEventListener[] listeners = eventListeners.getUpdateEventListeners();
-        log.debug("Existing update event listeners: {}", listeners.length);
-        BackboneEventListener eventListener = new BackboneEventListener();
-        eventListeners.setUpdateEventListeners((SaveOrUpdateEventListener[]) ArrayUtils.add(listeners, eventListener));
-        log.debug("Current update event listeners: {}",
-                sessionFactory.getEventListeners().getUpdateEventListeners().length);
-        eventListeners.setSaveEventListeners((SaveOrUpdateEventListener[]) ArrayUtils.add(eventListeners.getSaveEventListeners(), eventListener));
-        eventListeners.setPostUpdateEventListeners((PostUpdateEventListener[]) ArrayUtils.add(eventListeners.getPostUpdateEventListeners(), eventListener));
-        eventListeners.setPostInsertEventListeners((PostInsertEventListener[]) ArrayUtils.add(eventListeners.getPostInsertEventListeners(), eventListener));
+        EventListeners listeners = sessionFactory.getEventListeners();
+        BackboneEventListener listener = new BackboneEventListener();
+        listeners.setPostInsertEventListeners(
+                (PostInsertEventListener[]) ArrayUtils.add(listeners.getPostInsertEventListeners(), listener));
+        listeners.setPostUpdateEventListeners(
+                (PostUpdateEventListener[]) ArrayUtils.add(listeners.getPostUpdateEventListeners(), listener));
+        listeners.setPostDeleteEventListeners(
+                (PostDeleteEventListener[]) ArrayUtils.add(listeners.getPostDeleteEventListeners(), listener));
     }
 
     /**

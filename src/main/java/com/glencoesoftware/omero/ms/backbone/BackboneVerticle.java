@@ -21,7 +21,6 @@ package com.glencoesoftware.omero.ms.backbone;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.ObjectOutputStream;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -109,6 +108,9 @@ public class BackboneVerticle extends AbstractVerticle {
 
     public static final String GET_IMPORTED_IMAGE_FILES =
             "omero.get_imported_image_files";
+
+    public static final String MODEL_CHANGE_EVENT =
+            "ome.model.change";
 
     private final Executor executor;
 
@@ -237,18 +239,15 @@ public class BackboneVerticle extends AbstractVerticle {
                 };
             }
         );
-        eventBus.<JsonArray>consumer(
-                BackboneEventListener.MODEL_CHANGE_EVENT,
-                new Handler<Message<JsonArray>>() {
-                    public void handle(Message<JsonArray> changes) {
-                        for (Object change : changes.body()) {
-                            JsonObject changeObj = (JsonObject) change;
-                            log.info("OME Model Entity changed: {}(ID: {})",
-                                    changeObj.getString("entityName"),
-                                    changeObj.getLong("entityId"));
-                        }
-                    };
+        eventBus.<JsonObject>consumer(
+            MODEL_CHANGE_EVENT, new Handler<Message<JsonObject>>() {
+                public void handle(Message<JsonObject> event) {
+                    JsonObject change = event.body();
+                    log.debug("OME Model Entity changed: {}(ID: {})",
+                            change.getString("entityName"),
+                            change.getLong("entityId"));
                 }
+            }
         );
     }
 

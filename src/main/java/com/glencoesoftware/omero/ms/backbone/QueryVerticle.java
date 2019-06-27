@@ -50,6 +50,8 @@ import ome.model.core.Image;
 import ome.model.core.OriginalFile;
 import ome.model.core.Pixels;
 
+import static com.glencoesoftware.omero.ms.backbone.BackboneVerticle.MODEL_CHANGE_EVENT;
+
 
 /**
  * Main entry point for the OMERO microservice architecture backbone verticle.
@@ -109,6 +111,8 @@ public class QueryVerticle extends AbstractVerticle {
         router.get("/readiness")
             .handler(HealthCheckHandler.createWithHealthChecks(checks));
 
+        vertx.eventBus().<JsonObject>consumer(MODEL_CHANGE_EVENT, this::consumeModelEvent);
+
         int port = 9090;  // FIXME
         log.info("Starting HTTP server *:{}", port);
         server.requestHandler(router::accept).listen(port, result -> {
@@ -118,6 +122,13 @@ public class QueryVerticle extends AbstractVerticle {
                 future.fail(result.cause());
             }
         });
+    }
+
+    private void consumeModelEvent(Message<JsonObject> event) {
+        JsonObject change = event.body();
+        String name = change.getString("entityName");
+        Long id = change.getLong("entityID");
+        log.debug("OME Model Entity changed: {}(ID: {})", name, id);
     }
 
     private <T> void ifFailed(
