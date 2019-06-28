@@ -24,7 +24,6 @@ import java.io.ObjectInputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.lang.Integer;
 
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +44,6 @@ import io.vertx.ext.healthchecks.Status;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.spi.cluster.hazelcast.ClusterHealthCheck;
-import ome.model.annotations.FileAnnotation;
 import ome.model.core.Image;
 import ome.model.core.OriginalFile;
 import ome.model.core.Pixels;
@@ -126,9 +124,12 @@ public class QueryVerticle extends AbstractVerticle {
 
     private void consumeModelEvent(Message<JsonObject> event) {
         JsonObject change = event.body();
-        String name = change.getString("entityName");
-        Long id = change.getLong("entityID");
-        log.debug("OME Model Entity changed: {}(ID: {})", name, id);
+        String changeType = change.getString("changeType");
+        String entityType = change.getString("entityType");
+        Long entityId = change.getLong("entityId");
+        log.debug(
+            "OME Model Entity changeType: {} {}:{}",
+            changeType, entityType, entityId);
     }
 
     private <T> void ifFailed(
