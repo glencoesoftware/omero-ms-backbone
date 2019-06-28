@@ -37,14 +37,12 @@ import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import ome.api.IMetadata;
 import ome.api.IPixels;
 import ome.api.IQuery;
 import ome.conditions.RemovedSessionException;
 import ome.conditions.SessionTimeoutException;
 import ome.io.nio.OriginalFilesService;
 import ome.model.IObject;
-import ome.model.annotations.Annotation;
 import ome.model.annotations.FileAnnotation;
 import ome.model.core.Image;
 import ome.model.core.OriginalFile;
@@ -237,16 +235,6 @@ public class BackboneVerticle extends AbstractVerticle {
                 public void handle(Message<JsonObject> event) {
                     getImportedImageFiles(event);
                 };
-            }
-        );
-        eventBus.<JsonObject>consumer(
-            MODEL_CHANGE_EVENT, new Handler<Message<JsonObject>>() {
-                public void handle(Message<JsonObject> event) {
-                    JsonObject change = event.body();
-                    log.debug("OME Model Entity changed: {}(ID: {})",
-                            change.getString("entityName"),
-                            change.getLong("entityId"));
-                }
             }
         );
     }

@@ -12,7 +12,6 @@
   <bean id="omero-ms-backbone"
         class="com.glencoesoftware.omero.ms.backbone.BackboneService">
     <constructor-arg ref="preferenceContext"/>
-    <constructor-arg ref="sessionFactory"/>
     <constructor-arg ref="omero-ms-backbone-verticlefactory"/>
   </bean>
 
@@ -25,6 +24,11 @@
     <constructor-arg ref="/OMERO/Files"/>
     <constructor-arg ref="managedRepository"/>
     <constructor-arg value="${omero.fs.repo.path_rules}"/>
+  </bean>
+
+  <bean id="omero-ms-backbone-event-listener"
+        class="com.glencoesoftware.omero.ms.backbone.BackboneEventListener">
+    <constructor-arg ref="sessionFactory"/>
   </bean>
 
 </beans>

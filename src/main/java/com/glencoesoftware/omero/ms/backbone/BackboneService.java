@@ -36,12 +36,6 @@ import io.vertx.core.spi.VerticleFactory;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
 import ome.system.PreferenceContext;
-import org.apache.commons.lang.ArrayUtils;
-import org.hibernate.event.EventListeners;
-import org.hibernate.event.PostDeleteEventListener;
-import org.hibernate.event.PostInsertEventListener;
-import org.hibernate.event.PostUpdateEventListener;
-import org.hibernate.impl.SessionFactoryImpl;
 import org.slf4j.LoggerFactory;
 
 
@@ -64,7 +58,6 @@ public class BackboneService {
             Runtime.getRuntime().availableProcessors() * 2;
 
     BackboneService(PreferenceContext preferenceContext,
-                    SessionFactoryImpl sessionFactory,
                     VerticleFactory verticleFactory) {
         String clusterHost = Optional.ofNullable(preferenceContext.getProperty(
             "omero.ms.backbone.cluster_host"
@@ -105,21 +98,21 @@ public class BackboneService {
                             log.debug("Succeeded in deploying verticle");
                         }
                     });
+                    vertx.deployVerticle(
+                            "omero:omero-ms-backbone-event-listener",
+                            res -> {
+                        if (res.failed()) {
+                            log.error(
+                                "Failure deploying verticle", res.cause());
+                        } else {
+                            log.debug("Succeeded in deploying verticle");
+                        }
+                    });
                 } else {
                     log.error("Failed to start Hazelcast clustered Vert.x");
                 }
             }
         });
-
-        log.debug("Registering Hibernate Event Listeners");
-        EventListeners listeners = sessionFactory.getEventListeners();
-        BackboneEventListener listener = new BackboneEventListener();
-        listeners.setPostInsertEventListeners(
-                (PostInsertEventListener[]) ArrayUtils.add(listeners.getPostInsertEventListeners(), listener));
-        listeners.setPostUpdateEventListeners(
-                (PostUpdateEventListener[]) ArrayUtils.add(listeners.getPostUpdateEventListeners(), listener));
-        listeners.setPostDeleteEventListeners(
-                (PostDeleteEventListener[]) ArrayUtils.add(listeners.getPostDeleteEventListeners(), listener));
     }
 
     /**

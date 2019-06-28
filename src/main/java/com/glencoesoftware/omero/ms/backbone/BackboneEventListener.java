@@ -1,18 +1,21 @@
 package com.glencoesoftware.omero.ms.backbone;
 
-import io.vertx.core.Vertx;
-import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.AbstractVerticle;
 import io.vertx.core.json.JsonObject;
 import ome.model.IObject;
+
+import org.apache.commons.lang.ArrayUtils;
+import org.hibernate.event.EventListeners;
 import org.hibernate.event.PostDeleteEvent;
 import org.hibernate.event.PostDeleteEventListener;
 import org.hibernate.event.PostInsertEvent;
 import org.hibernate.event.PostInsertEventListener;
 import org.hibernate.event.PostUpdateEvent;
 import org.hibernate.event.PostUpdateEventListener;
+import org.hibernate.impl.SessionFactoryImpl;
 import org.slf4j.LoggerFactory;
 
-public class BackboneEventListener implements
+public class BackboneEventListener extends AbstractVerticle implements
         PostInsertEventListener,
         PostUpdateEventListener,
         PostDeleteEventListener {
@@ -20,11 +23,27 @@ public class BackboneEventListener implements
     private static final org.slf4j.Logger log =
             LoggerFactory.getLogger(BackboneEventListener.class);
 
-    private EventBus eventBus;
+    private final SessionFactoryImpl sessionFactory;
 
-    public BackboneEventListener() {
-        super();
-        eventBus = Vertx.vertx().eventBus();
+    BackboneEventListener(SessionFactoryImpl sessionFactory) {
+        this.sessionFactory = sessionFactory;
+    }
+
+    /**
+     * Entry point method which starts the server event loop.
+     * @param args Command line arguments.
+     */
+    @Override
+    public void start() {
+        log.info("Starting verticle");
+        log.info("Registering Hibernate Event Listeners");
+        EventListeners listeners = sessionFactory.getEventListeners();
+        listeners.setPostInsertEventListeners(
+                (PostInsertEventListener[]) ArrayUtils.add(listeners.getPostInsertEventListeners(), this));
+        listeners.setPostUpdateEventListeners(
+                (PostUpdateEventListener[]) ArrayUtils.add(listeners.getPostUpdateEventListeners(), this));
+        listeners.setPostDeleteEventListeners(
+                (PostDeleteEventListener[]) ArrayUtils.add(listeners.getPostDeleteEventListeners(), this));
     }
 
     @Override
@@ -57,7 +76,8 @@ public class BackboneEventListener implements
             event.put("changeType", changeType);
             event.put("entityType", entityType);
             event.put("entityId", entityId);
-            eventBus.publish(BackboneVerticle.MODEL_CHANGE_EVENT, event);
+            vertx.eventBus().publish(
+                    BackboneVerticle.MODEL_CHANGE_EVENT, event);
         }
     }
 }
