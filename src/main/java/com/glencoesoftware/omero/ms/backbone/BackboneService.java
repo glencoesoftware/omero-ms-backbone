@@ -25,11 +25,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Optional;
 
-import org.slf4j.LoggerFactory;
-
 import com.hazelcast.config.Config;
 import com.hazelcast.config.XmlConfigBuilder;
-
 import io.vertx.core.AsyncResult;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Handler;
@@ -39,6 +36,7 @@ import io.vertx.core.spi.VerticleFactory;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
 import ome.system.PreferenceContext;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -93,6 +91,16 @@ public class BackboneService {
                     vertx.deployVerticle(
                             "omero:omero-ms-backbone-verticle",
                             verticleOptions, res -> {
+                        if (res.failed()) {
+                            log.error(
+                                "Failure deploying verticle", res.cause());
+                        } else {
+                            log.debug("Succeeded in deploying verticle");
+                        }
+                    });
+                    vertx.deployVerticle(
+                            "omero:omero-ms-backbone-event-listener",
+                            res -> {
                         if (res.failed()) {
                             log.error(
                                 "Failure deploying verticle", res.cause());

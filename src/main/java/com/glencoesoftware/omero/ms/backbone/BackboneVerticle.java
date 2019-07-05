@@ -21,7 +21,6 @@ package com.glencoesoftware.omero.ms.backbone;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.ObjectOutputStream;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -38,14 +37,12 @@ import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import ome.api.IMetadata;
 import ome.api.IPixels;
 import ome.api.IQuery;
 import ome.conditions.RemovedSessionException;
 import ome.conditions.SessionTimeoutException;
 import ome.io.nio.OriginalFilesService;
 import ome.model.IObject;
-import ome.model.annotations.Annotation;
 import ome.model.annotations.FileAnnotation;
 import ome.model.core.Image;
 import ome.model.core.OriginalFile;
@@ -109,6 +106,9 @@ public class BackboneVerticle extends AbstractVerticle {
 
     public static final String GET_IMPORTED_IMAGE_FILES =
             "omero.get_imported_image_files";
+
+    public static final String MODEL_CHANGE_EVENT =
+            "ome.model.change";
 
     private final Executor executor;
 

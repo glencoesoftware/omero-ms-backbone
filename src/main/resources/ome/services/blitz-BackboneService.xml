@@ -26,4 +26,10 @@
     <constructor-arg value="${omero.fs.repo.path_rules}"/>
   </bean>
 
+  <bean id="omero-ms-backbone-event-listener"
+        class="com.glencoesoftware.omero.ms.backbone.BackboneEventListener">
+    <constructor-arg ref="preferenceContext"/>
+    <constructor-arg ref="sessionFactory"/>
+  </bean>
+
 </beans>
