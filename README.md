@@ -35,17 +35,10 @@ distribution and placement in the `etc` folder of your OMERO instance
 1. Symlinking of the `omero-ms-backbone*.jar` to `extensions.jar` in order to
 activate the infrastructure
 
-1. (Optional) In order to enable the Hibernate Event listeners and propagate 
-events from Hibernate to HazelCast, the `BackBoneEventListener` needs to be 
-registered with Hibernate. To do this, it is necessary to edit the 
-`model-psql.jar` in the `lib/server` directory. Some tools (e.g. Vim) are 
-capable of editing the JAR in place, otherwise it is necessary to unpack, 
-edit, and re-zip the JAR. The following lines must be added to `hibernate.cfg
-.xml` within that JAR:
-```xml
-<listener type="post-collection-update" class="com.glencoesoftware.omero.ms.backbone.BackboneEventListener"/>
-<listener type="post-collection-remove" class="com.glencoesoftware.omero.ms.backbone.BackboneEventListener"/>
-```
+1. (Optional) Configuring `omero.ms.backbone.event_listeners` OMERO server
+configuration property with one or more of "INSERT", "UPDATE", and "DELETE" to
+enable the respective event listeners to propagate Hibernate events from OMERO
+to Hazelcast
 
 1. Restarting your OMERO server
 

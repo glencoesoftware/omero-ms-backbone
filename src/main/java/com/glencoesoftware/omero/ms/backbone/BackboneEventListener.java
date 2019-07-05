@@ -1,8 +1,12 @@
 package com.glencoesoftware.omero.ms.backbone;
 
+import java.util.Optional;
+
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import ome.model.IObject;
+import ome.system.PreferenceContext;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.hibernate.event.EventListeners;
@@ -24,26 +28,40 @@ public class BackboneEventListener extends AbstractVerticle implements
             LoggerFactory.getLogger(BackboneEventListener.class);
 
     private final SessionFactoryImpl sessionFactory;
+    private PreferenceContext preferenceContext;
 
-    BackboneEventListener(SessionFactoryImpl sessionFactory) {
+    BackboneEventListener(PreferenceContext preferenceContext, SessionFactoryImpl sessionFactory) {
+        this.preferenceContext = preferenceContext;
         this.sessionFactory = sessionFactory;
     }
 
     /**
      * Entry point method which starts the server event loop.
-     * @param args Command line arguments.
      */
     @Override
     public void start() {
         log.info("Starting verticle");
-        log.info("Registering Hibernate Event Listeners");
+        JsonArray eventListeners =
+                new JsonArray(Optional.ofNullable(preferenceContext.getProperty(
+                        "omero.ms.backbone.event_listeners"
+                )).orElse("[]"));
+        log.info("Registering Hibernate Event Listeners: {}", eventListeners);
         EventListeners listeners = sessionFactory.getEventListeners();
-        listeners.setPostInsertEventListeners(
-                (PostInsertEventListener[]) ArrayUtils.add(listeners.getPostInsertEventListeners(), this));
-        listeners.setPostUpdateEventListeners(
-                (PostUpdateEventListener[]) ArrayUtils.add(listeners.getPostUpdateEventListeners(), this));
-        listeners.setPostDeleteEventListeners(
-                (PostDeleteEventListener[]) ArrayUtils.add(listeners.getPostDeleteEventListeners(), this));
+        if (eventListeners.contains("INSERT")) {
+            listeners.setPostInsertEventListeners(
+                    (PostInsertEventListener[]) ArrayUtils.add(listeners.getPostInsertEventListeners(), this));
+            log.debug("Insert event listener registered.");
+        }
+        if (eventListeners.contains("UPDATE")) {
+            listeners.setPostUpdateEventListeners(
+                    (PostUpdateEventListener[]) ArrayUtils.add(listeners.getPostUpdateEventListeners(), this));
+            log.debug("Update event listener registered.");
+        }
+        if (eventListeners.contains("DELETE")) {
+            listeners.setPostDeleteEventListeners(
+                    (PostDeleteEventListener[]) ArrayUtils.add(listeners.getPostDeleteEventListeners(), this));
+            log.debug("Delete event listener registered.");
+        }
     }
 
     @Override
