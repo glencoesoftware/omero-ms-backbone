@@ -21,9 +21,9 @@ package com.glencoesoftware.omero.ms.backbone;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectOutputStream;
 
-import org.testng.annotations.Test;
-
-import org.testng.annotations.BeforeMethod;
+import org.junit.Test;
+import org.junit.Assert;
+import org.junit.Before;
 
 import ome.model.containers.Dataset;
 import ome.model.containers.Project;
@@ -38,7 +38,7 @@ public class DetailsContextFilterTest {
 
     private Dataset d;
 
-    @BeforeMethod
+    @Before
     public void setUp() {
         p = new Project(1L, true);
         p.getDetails().setContexts(
