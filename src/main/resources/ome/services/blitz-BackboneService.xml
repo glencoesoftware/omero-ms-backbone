@@ -14,16 +14,74 @@
     <constructor-arg ref="preferenceContext"/>
     <constructor-arg ref="omero-ms-backbone-verticlefactory"/>
   </bean>
+  
+  <bean name="filesystem"  abstract="true">
+    <constructor-arg index="0" value="/OMERO56"/>
+  </bean>
+
+  <bean id="omeroFilePathResolver" class="ome.services.OmeroFilePathResolver">
+    <constructor-arg value="/OMERO56"/>
+    <constructor-arg ref="simpleSqlAction"/>
+  </bean>
+
+  <!-- Casting string to Long to prevent the wrong ctor from being used -->
+  <bean name="MemoizerWait" class="java.lang.Long">
+    <constructor-arg value="${omero.pixeldata.memoizer_wait}"/>
+  </bean>
+
+  <bean id="backOff" class="${omero.pixeldata.backoff}">
+    <constructor-arg ref="tileSizes"/>
+  </bean>
+
+  <alias name="${omero.pixeldata.tile_sizes_bean}" alias="tileSizes"/>
+
+  <alias name="internal-ome.api.ICompress"
+         alias="internal-ome.api.LocalCompress"/>
+  <bean id="internal-ome.api.ICompress"
+        class="ome.logic.CompressImpl"
+        scope="prototype"/>
+
+  <bean id="LUTScripts" class="ome.services.scripts.ScriptFileType">
+    <constructor-arg index="0" value="*.lut"/>
+    <constructor-arg index="1" value="text/x-lut"/>
+  </bean>
+
+  <bean id="metrics" class="ome.system.metrics.NullMetrics"/>
+  
+  <bean name="/OMERO/Pixels" class="com.glencoesoftware.omero.ms.backbone.PixelsService"
+        parent="filesystem">
+    <!-- index=0 "path" comes from parent -->
+    <constructor-arg index="1" ref="MemoizerWait"/>
+    <constructor-arg ref="omeroFilePathResolver"/>
+    <constructor-arg ref="backOff"/>
+    <constructor-arg ref="tileSizes"/>
+    <constructor-arg><null /></constructor-arg>
+    <constructor-arg value="2048" />
+    <property name="metrics" ref="metrics"/>
+  </bean>
+  
+  <bean name="pixelsService" class="com.glencoesoftware.omero.ms.backbone.PixelsService"
+        parent="filesystem">
+    <!-- index=0 "path" comes from parent -->
+    <constructor-arg index="1" ref="MemoizerWait"/>
+    <constructor-arg ref="omeroFilePathResolver"/>
+    <constructor-arg ref="backOff"/>
+    <constructor-arg ref="tileSizes"/>
+    <constructor-arg><null /></constructor-arg>
+    <constructor-arg value="2048" />
+    <property name="metrics" ref="metrics"/>
+  </bean>
 
   <bean id="omero-ms-backbone-verticle"
         class="com.glencoesoftware.omero.ms.backbone.BackboneVerticle"
-        singleton="false">
+        scope="prototype">
     <constructor-arg ref="executor"/>
     <constructor-arg ref="sessionManager"/>
     <constructor-arg ref="simpleSqlAction"/>
     <constructor-arg ref="/OMERO/Files"/>
     <constructor-arg ref="managedRepository"/>
     <constructor-arg value="${omero.fs.repo.path_rules}"/>
+    <constructor-arg ref="/OMERO/Pixels"/>
   </bean>
 
 </beans>

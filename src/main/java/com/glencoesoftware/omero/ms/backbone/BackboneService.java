@@ -63,7 +63,7 @@ public class BackboneService {
                     VerticleFactory verticleFactory) {
         String clusterHost = Optional.ofNullable(preferenceContext.getProperty(
             "omero.ms.backbone.cluster_host"
-        )).orElse(VertxOptions.DEFAULT_CLUSTER_HOST);
+        )).orElse("localhost");
         int workerPoolSize = Integer.parseInt(Optional.ofNullable(
             preferenceContext.getProperty("omero.ms.backbone.worker_pool_size")
         ).orElse(Integer.toString(DEFAULT_WORKER_POOL_SIZE)));
@@ -82,8 +82,8 @@ public class BackboneService {
         ClusterManager clusterManager =
                 new HazelcastClusterManager(hazelcastConfig);
         VertxOptions options = new VertxOptions()
-                .setClusterManager(clusterManager)
-                .setClusterHost(clusterHost);
+                .setClusterManager(clusterManager);
+        options.getEventBusOptions().setHost(clusterHost);
         Vertx.clusteredVertx(options, new Handler<AsyncResult<Vertx>>() {
             @Override
             public void handle(AsyncResult<Vertx> event) {
@@ -101,7 +101,11 @@ public class BackboneService {
                         }
                     });
                 } else {
-                    log.error("Failed to start Hazelcast clustered Vert.x");
+                    log.error("Failed to start Hazelcast clustered Vert.x", event.cause());
+                    event.cause().fillInStackTrace();
+                    for(StackTraceElement elt : event.cause().getStackTrace()) {
+                        log.error(elt.toString());
+                    }
                 }
             }
         });

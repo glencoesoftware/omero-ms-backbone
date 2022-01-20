@@ -69,7 +69,6 @@ public class QueryVerticle extends AbstractVerticle {
         HttpServer server = vertx.createHttpServer();
         Router router = Router.router(vertx);
 
-        // Thumbnail request handlers
         router.get("/api/:sessionKey/isSessionValid")
             .handler(this::isSessionValid);
 
@@ -99,6 +98,9 @@ public class QueryVerticle extends AbstractVerticle {
 
         router.get("/api/:sessionKey/getImportedImageFiles/:imageId")
             .handler(this::getImportedImageFiles);
+
+        router.get("/api/:sessionKey/getZarrInfo/:imageId")
+            .handler(this::getZarrInfo);
 
         Handler<Promise<Status>> procedure =
                 ClusterHealthCheck.createProcedure(vertx);
@@ -453,6 +455,38 @@ public class QueryVerticle extends AbstractVerticle {
                 response.headers().set("Content-Type", "text/plain");
                 List<OriginalFile> originalFiles = deserialize(result);
                 s = String.valueOf(originalFiles.size());
+                log.debug("Response ended");
+            } catch (IOException | ClassNotFoundException e) {
+                log.error("Exception while decoding object in response", e);
+            } finally {
+                response.end(s);
+            }
+        });
+    }
+
+    private void getZarrInfo(RoutingContext event) {
+        final HttpServerRequest request = event.request();
+        final HttpServerResponse response = event.response();
+        String sessionKey = request.params().get("sessionKey");
+        log.debug("Session key: " + sessionKey);
+        Long imageId = Long.parseLong(request.params().get("imageId"));
+        log.debug("Image ID: {}", imageId);
+
+        final JsonObject data = new JsonObject();
+        data.put("sessionKey", sessionKey);
+        data.put("id", imageId);
+        vertx.eventBus().<byte[]>request(
+                BackboneVerticle.GET_ZARR_INFO, data, result -> {
+            String s = "";
+            try {
+                if (result.failed()) {
+                    ifFailed(response, result);
+                    return;
+                }
+                response.headers().set("Content-Type", "text/plain");
+                String test = deserialize(result);
+                log.info(test);
+                s = String.valueOf(test.length());
                 log.debug("Response ended");
             } catch (IOException | ClassNotFoundException e) {
                 log.error("Exception while decoding object in response", e);
