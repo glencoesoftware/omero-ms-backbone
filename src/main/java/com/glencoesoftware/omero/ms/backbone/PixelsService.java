@@ -19,15 +19,27 @@
 package com.glencoesoftware.omero.ms.backbone;
 
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
+import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.KeyFactory;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 import java.util.Iterator;
+
+import javax.crypto.Cipher;
 
 import org.slf4j.LoggerFactory;
 
@@ -60,6 +72,8 @@ public class PixelsService extends ome.io.nio.PixelsService {
     /** Max Tile Length */
     private final Integer maxTileLength;
 
+    private CredentialsManager credentialsManager;
+
     public PixelsService(
             String path, long memoizerWait, FilePathResolver resolver,
             BackOff backOff, TileSizes sizes, IQuery iQuery,
@@ -67,8 +81,11 @@ public class PixelsService extends ome.io.nio.PixelsService {
         super(
             path, true, new File(new File(path), "BioFormatsCache"),
             memoizerWait, resolver, backOff, sizes, iQuery);
-        log.info("In Backbone PixelsService");
         this.maxTileLength = maxTileLength;
+        this.credentialsManager = new NamedCredentialsManager(
+                "/OMERO56/Pixels/credentials/ngffcreds.json");
+        //this.credentialsManager = new BucketCredentialsManager(
+        //        "/OMERO56/Pixels/credentials/ngffcreds.json");
     }
 
     /**
@@ -98,7 +115,12 @@ public class PixelsService extends ome.io.nio.PixelsService {
                 // FIXME: We might want to support additional S3FS settings in
                 // the future.  See:
                 //   * https://github.com/lasersonlab/Amazon-S3-FileSystem-NIO
-                FileSystem fs = FileSystems.newFileSystem(endpoint, null);
+                FileSystem fs = null;
+                try {
+                    fs = FileSystems.getFileSystem(endpoint);
+                } catch (FileSystemNotFoundException e) {
+                    fs = FileSystems.newFileSystem(endpoint, null);
+                }
                 return fs.getPath(bucket, rest);
             }
         } catch (URISyntaxException e) {
@@ -219,7 +241,7 @@ public class PixelsService extends ome.io.nio.PixelsService {
         log.info("In Backbone getPixelBuffer");
         try {
             Path root = asPath(getZarrPathStr(pixels));
-            log.info(root.toString());
+            log.info("ROOT IS: " + root.toString());
             try {
                 PixelBuffer v =
                         new ZarrPixelBuffer(pixels, root, maxTileLength);
@@ -250,13 +272,17 @@ public class PixelsService extends ome.io.nio.PixelsService {
     }
 
     public File getZarrJsonFile(Pixels pixels) {
-        File pixelsDir = new File(getPixelsDirectory());
-        log.info(pixelsDir.getAbsolutePath());
         StringBuilder sb = new StringBuilder();
-        sb.append(pixels.getId());
+        String pixPath = getPixelsPath(pixels.getId());
+        log.info(pixPath);
+        sb.append(pixPath);
         sb.append("_zarr.json");
-        log.info(sb.toString());
-        return findFile(pixelsDir, sb.toString());
+        File f = new File(sb.toString());
+        if (!f.exists()) {
+            log.error("Missing zarr json file at " + sb.toString());
+            return null;
+        }
+        return f;
     }
 
     public File findFile(File file, String filename) {
@@ -280,7 +306,9 @@ public class PixelsService extends ome.io.nio.PixelsService {
     public String getZarrPathFromJson(File zarrJson) throws IOException {
         String jsonString =  new String(Files.readAllBytes(zarrJson.toPath()));
         JsonObject jsonObj = new JsonObject(jsonString);
-        return jsonObj.getString("zarrPath");
+        log.info(jsonObj.toString());
+        String zarrPath = credentialsManager.injectCredentials(jsonObj);
+        return zarrPath;
     }
 
     protected BfPixelBuffer createBfPixelBuffer(final String filePath,
