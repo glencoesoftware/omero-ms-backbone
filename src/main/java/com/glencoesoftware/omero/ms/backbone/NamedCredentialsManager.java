@@ -34,7 +34,7 @@ public class NamedCredentialsManager implements CredentialsManager {
             return zarrPath;
         }
         try {
-            String credentialsName = zarrJson.getString("credentials_name", "default");
+            String credentialsName = zarrJson.getString("credentials_name");
             if (!credsObj.containsKey(credentialsName)) {
                 throw new IllegalArgumentException(
                         "No credentials matching name " + credentialsName);

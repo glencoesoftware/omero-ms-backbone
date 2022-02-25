@@ -82,10 +82,10 @@ public class PixelsService extends ome.io.nio.PixelsService {
             path, true, new File(new File(path), "BioFormatsCache"),
             memoizerWait, resolver, backOff, sizes, iQuery);
         this.maxTileLength = maxTileLength;
-        this.credentialsManager = new NamedCredentialsManager(
-                "/OMERO56/Pixels/credentials/ngffcreds.json");
-        //this.credentialsManager = new BucketCredentialsManager(
+        //this.credentialsManager = new NamedCredentialsManager(
         //        "/OMERO56/Pixels/credentials/ngffcreds.json");
+        this.credentialsManager = new BucketCredentialsManager(
+                "/OMERO56/Pixels/credentials/ngffcreds.json");
     }
 
     /**
@@ -119,6 +119,8 @@ public class PixelsService extends ome.io.nio.PixelsService {
                 try {
                     fs = FileSystems.getFileSystem(endpoint);
                 } catch (FileSystemNotFoundException e) {
+                    System.setProperty("com.amazonaws.regions.RegionUtils.fileOverride",
+                            "/home/kevin/omero56/server/OMERO.server-5.6.3-ice36-b228/etc/regions.xml");
                     fs = FileSystems.newFileSystem(endpoint, null);
                 }
                 return fs.getPath(bucket, rest);
@@ -127,11 +129,6 @@ public class PixelsService extends ome.io.nio.PixelsService {
             // Fall through
         }
         return Paths.get(ngffDir);
-    }
-
-    @Override
-    protected int getSeries(Pixels pixels) {
-        return pixels.getImage().getSeries();
     }
 
     /**
