@@ -1,12 +1,12 @@
 plugins {
     id 'eclipse'
     id 'java'
-    id 'maven'
+    id 'maven-publish'
     id 'application'
 }
 
 group = 'com.glencoesoftware.omero'
-version = '0.1.0-SNAPSHOT'
+version = '0.2.0-SNAPSHOT'
 
 mainClassName = 'io.vertx.core.Starter'
 
@@ -31,9 +31,9 @@ configurations.all {
 }
 
 dependencies {
-    compile 'io.vertx:vertx-web:3.6.3'
-    compile 'io.vertx:vertx-hazelcast:3.6.3'
-    compile 'io.vertx:vertx-health-check:3.6.3'
+    implementation 'io.vertx:vertx-web:3.8.1'
+    implementation 'io.vertx:vertx-hazelcast:3.8.1'
+    implementation 'io.vertx:vertx-health-check:3.8.1'
     compileOnly('omero:blitz:5.4.10-ice36-b105') {
         exclude group: 'org.testng', module: 'testng'
     }
@@ -41,7 +41,7 @@ dependencies {
         exclude group: 'org.testng', module: 'testng'
     }
 
-    testCompile 'org.testng:testng:6.10'
+    testImplementation("junit:junit:4.12")
 }
 
 jar {
@@ -57,7 +57,7 @@ test {
   // enable TestNG support (default is JUnit)
   useTestNG()
 }
-
+/*
 uploadArchives {
     repositories {
         mavenDeployer {
@@ -70,6 +70,7 @@ uploadArchives {
         }
     }
 }
+*/
 
 applicationDefaultJvmArgs = [
   "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory"

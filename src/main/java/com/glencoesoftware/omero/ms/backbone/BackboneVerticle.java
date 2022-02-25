@@ -21,10 +21,13 @@ package com.glencoesoftware.omero.ms.backbone;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.ObjectOutputStream;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
@@ -44,6 +47,7 @@ import ome.api.IQuery;
 import ome.conditions.RemovedSessionException;
 import ome.conditions.SessionTimeoutException;
 import ome.io.nio.OriginalFilesService;
+import ome.io.nio.PixelBuffer;
 import ome.model.IObject;
 import ome.model.annotations.Annotation;
 import ome.model.annotations.FileAnnotation;
@@ -57,7 +61,10 @@ import ome.services.util.Executor;
 import ome.system.Principal;
 import ome.system.ServiceFactory;
 import ome.util.SqlAction;
+import omero.ApiUsageException;
 import omero.ServerError;
+import omero.api.IQueryPrx;
+import omero.sys.ParametersI;
 import omero.util.IceMapper;
 import ome.services.blitz.repo.FileMaker;
 import ome.services.blitz.repo.LegacyRepositoryI;
@@ -110,6 +117,9 @@ public class BackboneVerticle extends AbstractVerticle {
     public static final String GET_IMPORTED_IMAGE_FILES =
             "omero.get_imported_image_files";
 
+    public static final String GET_ZARR_INFO =
+            "omero.get_zarr_info";
+
     private final Executor executor;
 
     private final SessionManager sessionManager;
@@ -128,17 +138,21 @@ public class BackboneVerticle extends AbstractVerticle {
 
     private String managedRepositoryRoot;
 
+    private PixelsService pixelsService;
+
     public BackboneVerticle(Executor executor,
             SessionManager sessionManager,
             SqlAction sqlAction,
             OriginalFilesService originalFilesService,
             LegacyRepositoryI managedRepository,
-            String pathRules) {
+            String pathRules,
+            PixelsService pixelsService) {
         this.executor = executor;
         this.sessionManager = sessionManager;
         this.sqlAction = sqlAction;
         this.originalFilesService = originalFilesService;
         this.managedRepository = managedRepository;
+        this.pixelsService = pixelsService;
 
         try {
             omero.model.OriginalFile description =
@@ -237,6 +251,13 @@ public class BackboneVerticle extends AbstractVerticle {
                 };
             }
         );
+        eventBus.<JsonObject>consumer(
+            GET_ZARR_INFO, new Handler<Message<JsonObject>>() {
+                public void handle(Message<JsonObject> event) {
+                    getZarrInfo(event);
+                }
+            });
+
     }
 
     private void handleMessageWithJob(BackboneSimpleWork job) {
@@ -523,4 +544,26 @@ public class BackboneVerticle extends AbstractVerticle {
             .getAbsolutePath();
     }
 
+    private void getZarrInfo(Message<JsonObject> message) {
+        BackboneSimpleWork job = new BackboneSimpleWork(message, this, "getZarrInfo") {
+            @Transactional(readOnly = true)
+            public String doWork(Session session, ServiceFactory sf) {
+                try {
+                    IQuery iQuery = sf.getQueryService();
+                    JsonObject data = this.getMessage().body();
+                    Pixels pixels = (Pixels) iQuery.get(Pixels.class, data.getLong("id"));
+                    String zarrPath = pixelsService.getZarrPathStr(pixels);
+                    PixelBuffer v = new ZarrPixelBuffer(pixels, Paths.get(zarrPath), 2048);
+                    log.info(v.getResolutionDescriptions().toString());
+                    log.info(zarrPath);
+                    return zarrPath;
+                } catch (Exception e) {
+                    log.error("Error retrieving data", e);
+                    message.fail(500, e.getMessage());
+                }
+                return null;
+            }
+        };
+        handleMessageWithJob(job);
+    }
 }
